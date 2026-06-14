@@ -36,6 +36,31 @@ These are the projects that best represent the kind of work I want to keep doing
 
 </div>
 
+## Patent
+
+<div class="award-grid">
+  <div class="award-card">
+    <a class="award-image-link" href="../assets/patent/WO2026087546A1.pdf" target="_blank">
+      <img src="../assets/patent/wo2026087546a1-front-page.png" alt="Front page of international patent application WO 2026/087546 A1" class="award-image" />
+    </a>
+    <div class="award-copy">
+      <div class="hero-kicker">Published Patent Application</div>
+      <h3>Transducive Signal Modulator for Simulated Cardiopulmonary Resuscitation</h3>
+      <p class="award-meta">WO 2026/087546 A1 | Koninklijke Philips N.V.</p>
+      <p>
+        Named inventor on an electromechanical system that generates realistic CPR-corrupted
+        ECG and thoracic-impedance signals on a CPR manikin, producing reproducible synthetic
+        data for defibrillator algorithm development and testing.
+      </p>
+      <p>
+        <a href="../assets/patent/WO2026087546A1.pdf" target="_blank">Full PDF</a> ·
+        <a href="https://patents.google.com/patent/WO2026087546A1/en" target="_blank">Google Patents</a> ·
+        <a href="../experience.md#patents">More in Experience</a>
+      </p>
+    </div>
+  </div>
+</div>
+
 ## What I Optimize For
 
 - Technical depth without losing usability.
