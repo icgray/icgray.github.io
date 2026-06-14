@@ -1,5 +1,6 @@
 site_name: Harsh Raje
 site_description: Robotics, controls, embedded systems, and experimental software.
+site_url: https://icgray.github.io/
 theme:
   name: material
   features:
