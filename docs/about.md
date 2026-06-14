@@ -21,12 +21,13 @@ At the University of Washington and in industry roles, I have worked on robotics
 
 ## What This Site Is For
 
-This is not meant to be a glossy one-page resume. It is a working portfolio:
+I would rather show the work than summarize it. So instead of a one-page resume, this site collects the projects, writing, and experiments in enough depth to judge for yourself:
 
-- project writeups with enough technical detail to be credible,
-- a writing section for ideas that used to sit unfinished in Blogspot drafts,
-- a stable place to link code, demos, papers, videos, and experiments,
-- and a structure that can keep growing with GitHub rather than getting rebuilt from scratch every few months.
+- project writeups that explain the real engineering decisions, tradeoffs, and results,
+- shorter notes on the ideas and lessons behind the work,
+- and direct links to code, demos, papers, and videos so nothing is just a claim.
+
+If you want the quick version, the [Experience](experience.md) page has it. If you want to see how I actually think and build, start with the projects.
 
 ## Current Direction
 
