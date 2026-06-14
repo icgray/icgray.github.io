@@ -1,0 +1,6 @@
+slug,title,years,role,tech,tags
+collaborative_load_transport,Sensing for Collaborative Load Transport,2020-2021,Capstone team member (mechanical and controls),Strain load cells; Arduino; analog filtering; linear regression calibration; 3D printing; CAD,force sensing;collaborative robotics;capstone;embedded
+racecar_lidar,Racecar LiDAR Benchmarking,2024-2026,Research engineer,Python; NumPy; SciPy; OpenCV; AprilTags; OptiTrack; ESP32; MuJoCo,lidar;odometry;benchmarking;racecar;state estimation
+shotpeening_ml,Shot Peening ML,2024-2025,ML engineer and software developer,Python; PyTorch; Tkinter; NumPy; Matplotlib; CI,machine learning;manufacturing;fea surrogate;gui
+crack_detection,Crack Detection Pipeline,2026,ML engineer and tooling developer,Python; PyTorch; transfer learning; evaluation tooling,computer vision;defect detection;pytorch;pipeline
+webcam_streaming,Webcam Streaming Stack,2026,Systems builder,Raspberry Pi; mediamtx; Tailscale; WebRTC; RTSP; Python,streaming;raspberry pi;infrastructure;webrtc

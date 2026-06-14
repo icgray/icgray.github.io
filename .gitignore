@@ -1,0 +1,16 @@
+# MkDocs build output (rebuilt by the GitHub Actions workflow)
+/site/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.mkdocs_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

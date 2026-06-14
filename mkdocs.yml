@@ -1,0 +1,59 @@
+site_name: Harsh Raje
+site_description: Robotics, controls, embedded systems, and experimental software.
+theme:
+  name: material
+  features:
+    - navigation.top
+    - navigation.sections
+    - navigation.tabs
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: default
+      primary: brown
+      accent: amber
+    - scheme: slate
+      primary: brown
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+
+nav:
+  - Home: index.md
+  - About: about.md
+  - Projects:
+      - Overview: projects/index.md
+      - Sensing for Collaborative Load Transport:
+          - Sensing for Collaborative Load Transport: projects/collaborative_load_transport.md
+          - Sensing for Collaborative Load Transport Report: projects/collaborative_load_transport_report.md
+      - Racecar LiDAR Benchmarking: projects/racecar_lidar.md
+      - Shot Peening ML: projects/shotpeening_ml.md
+      - Crack Detection Pipeline: projects/crack_detection.md
+      - Webcam Streaming Stack: projects/webcam_streaming.md
+  - Experience: experience.md
+  - Writing:
+      - Overview: writing/index.md
+      - Racecar Benchmark Notes: writing/racecar-benchmark-notes.md
+      - Designing Sensor-Rich Robots: writing/sensor-rich-robots.md
+      - Replacing FEA with ML: writing/replacing-fea-with-ml.md
+      - Tools People Actually Use: writing/tools-people-use.md
+      - Low-Latency Camera Streaming: writing/low-latency-camera-streaming.md
+      - Small Scripts Worth Keeping: writing/small-scripts-worth-keeping.md
+  - Toys:
+      - Overview: toys/index.md
+  - Contact: contact.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - codehilite
+  - footnotes
+  - tables
+
+extra_css:
+  - stylesheets/extra.css

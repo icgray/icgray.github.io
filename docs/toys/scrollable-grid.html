@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Drag & Drop Grid – Scrollable 100×100 Board</title>
+    <style>
+        :root {
+            --cell: 56px;
+            /* pixel size per cell (zoom changes this) */
+            --gap: 2px;
+            /* gap between cells + board padding */
+            --view: 10;
+            /* logical cells to fit; used for zoom math */
+            --vpw: 520px;
+            /* fixed viewport width in pixels */
+            --vph: 520px;
+            /* fixed viewport height in pixels */
+            --bg: #0b1220;
+            --panel: #0f172a;
+            --grid: #1f2a44;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --radius: 14px;
+            --shadow: 0 10px 30px rgba(0, 0, 0, .25);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
+            background: radial-gradient(1200px 800px at 10% -10%, #172042 0%, var(--bg) 40%);
+            color: var(--text);
+            display: grid;
+            place-items: center;
+            user-select: none;
+        }
+
+        .app {
+            width: min(1100px, 96vw);
+            height: min(760px, 94vh);
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+            border: 1px solid #18213a;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+        }
+
+        .sidebar {
+            display: grid;
+            grid-template-rows: auto auto 1fr auto;
+            gap: 16px;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: .3px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* Palette */
+        .palette {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .piece {
+            border: 2px solid rgba(255, 255, 255, .1);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .25), inset 0 2px 6px rgba(255, 255, 255, .06);
+            cursor: grab;
+            user-select: none;
+            border-radius: 0;
+        }
+
+        .piece:active {
+            cursor: grabbing;
+        }
+
+        .piece[data-src="palette"] {
+            width: 50px;
+            /*calc(var(--cell) - 8px); */
+            height: 50px;
+            /* calc(var(--cell) - 8px); */
+            outline: 2px dashed rgba(255, 255, 255, .08);
+            outline-offset: -6px;
+        }
+
+        /* Right panel */
+        .board-wrap {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        /* Fixed-size viewport; board scrolls inside it */
+        .viewport {
+            position: relative;
+            width: var(--vpw);
+            height: var(--vph);
+            overflow: auto;
+            border-radius: var(--radius);
+            border: 1px solid #1d2a4a;
+            box-shadow: var(--shadow);
+            background: var(--grid);
+        }
+
+        /* Giant 100×100 grid */
+        .board {
+            position: relative;
+            /* for absolutely positioned pieces */
+            display: grid;
+            grid-template-columns: repeat(100, var(--cell));
+            grid-template-rows: repeat(100, var(--cell));
+            gap: var(--gap);
+            padding: var(--gap);
+            background: var(--grid);
+            isolation: isolate;
+            width: calc(100 * var(--cell) + 101 * var(--gap));
+            height: calc(100 * var(--cell) + 101 * var(--gap));
+            will-change: width, height;
+            /* smoother zoom */
+        }
+
+        /* Actual cells for visuals + highlight */
+        .cell {
+            width: var(--cell);
+            height: var(--cell);
+            background: #0b1220;
+            border-radius: 0;
+            outline: 1px solid rgba(255, 255, 255, .07);
+        }
+
+        .cell.drop-ok {
+            box-shadow: inset 0 0 0 3px rgba(52, 211, 153, .45);
+        }
+
+        .cell.drop-no {
+            box-shadow: inset 0 0 0 3px rgba(239, 68, 68, .45);
+        }
+
+        /* Pieces placed on the board */
+        .piece.placed {
+            position: absolute;
+            border-radius: 0;
+            z-index: 2;
+        }
+
+        /* Mini‑map / helpers */
+        .minimap-card {
+            padding: 12px;
+            border: 1px solid #18213a;
+            border-radius: 12px;
+            background: #0b1220;
+        }
+
+        .mini-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .mini-label {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .jump {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .jump input {
+            width: 64px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #1e293b;
+            background: #0b1220;
+            color: var(--text);
+        }
+
+        .jump button {
+            padding: 8px 10px;
+        }
+
+        .kbd {
+            font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            background: #0b1220;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 2px 6px;
+            color: var(--muted);
+        }
+
+        .inst {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            background: rgba(2, 6, 23, .75);
+            border: 1px solid #1e293b;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .toast {
+            position: absolute;
+            left: 50%;
+            top: -50px;
+            translate: -50% 0;
+            background: rgba(15, 23, 42, .92);
+            border: 1px solid #1e293b;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all .4s ease;
+        }
+
+        .toast.show {
+            top: 12px;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <section class="panel sidebar">
+            <header>
+                <h1>Scrollable 100×100 Grid</h1>
+                <div class="muted">Viewport is fixed size. Ctrl+Scroll zooms by resizing blocks so you see more/less
+                    cells. Pieces can be multi‑cell. Right‑click to delete. Hold <b>Alt</b> to duplicate while dragging.
+                </div>
+            </header>
+
+            <div>
+                <div class="muted" style="margin-bottom:8px">Palette</div>
+                <div class="palette" id="palette">
+                    <!-- 1×1 pieces -->
+                    <div class="piece" draggable="true" data-color="#60a5fa" data-src="palette" data-w="1" data-h="1"
+                        style="background:#60a5fa"></div>
+                    <div class="piece" draggable="true" data-color="#34d399" data-src="palette" data-w="1" data-h="1"
+                        style="background:#34d399"></div>
+                    <div class="piece" draggable="true" data-color="#f59e0b" data-src="palette" data-w="1" data-h="1"
+                        style="background:#f59e0b"></div>
+                    <div class="piece" draggable="true" data-color="#a78bfa" data-src="palette" data-w="1" data-h="1"
+                        style="background:#a78bfa"></div>
+                    <div class="piece" draggable="true" data-color="#f472b6" data-src="palette" data-w="1" data-h="1"
+                        style="background:#f472b6"></div>
+                    <div class="piece" draggable="true" data-color="#22d3ee" data-src="palette" data-w="1" data-h="1"
+                        style="background:#22d3ee"></div>
+                    <!-- Multi‑cell pieces -->
+                    <div class="piece" draggable="true" data-color="#e11d48" data-src="palette" data-w="2" data-h="2"
+                        style="background:#e11d48" title="2×2"></div>
+                    <div class="piece" draggable="true" data-color="#10b981" data-src="palette" data-w="2" data-h="1"
+                        style="background:#10b981" title="2×1"></div>
+                </div>
+            </div>
+
+            <div class="minimap-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="font-weight:700">Mini‑map</div>
+                    <div class="mini-label">click to jump</div>
+                </div>
+                <canvas id="minimap" width="220" height="220"
+                    style="width:100%;height:auto;border-radius:10px;margin-top:8px;display:block;background:#0f172a;border:1px solid #1e293b"></canvas>
+                <div class="mini-row"><span class="mini-label">Viewport</span><span class="kbd">Arrows</span><span
+                        class="mini-label">×1 cell</span><span class="kbd">Shift+Arrows</span><span
+                        class="mini-label">×5 cells</span></div>
+                <div class="mini-row"><span class="mini-label">Zoom</span><span class="kbd">Ctrl + Scroll</span><span
+                        class="mini-label">(10→12→14…)</span></div>
+                <div class="mini-row jump">
+                    <span class="mini-label">Jump to</span>
+                    <label class="mini-label">r<input id="jumpR" type="number" min="0" max="99" value="0"></label>
+                    <label class="mini-label">c<input id="jumpC" type="number" min="0" max="99" value="0"></label>
+                    <button id="btnJump">Go</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel board-wrap">
+            <div class="viewport" id="viewport" tabindex="0">
+                <div class="board" id="board" aria-label="100 by 100 grid board" role="grid"></div>
+            </div>
+            <div class="inst">Viewport shows ~10×10 at default zoom. Ctrl+Scroll to zoom. Drag anywhere (scroll while
+                dragging works).</div>
+            <div class="toast" id="toast">Can’t place there</div>
+        </section>
+    </div>
+
+    <script>
+        // ===== Config =====
+        const N = 100; // 100×100 logical grid
+
+        const board = document.getElementById('board');
+        const palette = document.getElementById('palette');
+        const viewport = document.getElementById('viewport');
+        const toast = document.getElementById('toast');
+        const minimap = document.getElementById('minimap');
+        const mctx = minimap.getContext('2d');
+        const btnJump = document.getElementById('btnJump');
+        const jr = document.getElementById('jumpR');
+        const jc = document.getElementById('jumpC');
+
+        const cssPx = (name) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+        let CELL = cssPx('--cell');
+        let GAP = cssPx('--gap');
+        let VIEW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--view')) || 10;
+
+        // ===== Occupancy & Cells =====
+        const occ = Array.from({ length: N }, () => Array(N).fill(null));
+        const cells = [];
+        for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.row = r; cell.dataset.col = c;
+                cells.push(cell);
+                board.appendChild(cell);
+            }
+        }
+
+        // ===== Pieces =====
+        function makePiece(color, w = 1, h = 1) {
+            const el = document.createElement('div');
+            el.className = 'piece placed';
+            el.draggable = true;
+            el.style.background = color;
+            el.dataset.color = color;
+            el.dataset.src = 'board';
+            el.dataset.w = w; el.dataset.h = h;
+            el.id = `p_${Math.random().toString(36).slice(2, 9)}`;
+
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const r = +el.dataset.row, c = +el.dataset.col, w = +el.dataset.w, h = +el.dataset.h;
+                clearArea(r, c, w, h); el.remove(); drawMinimap();
+            });
+            el.addEventListener('dragstart', onDragStartPiece);
+            el.addEventListener('dragend', onDragEndPiece);
+            return el;
+        }
+
+        function placePieceEl(el, r, c) {
+            const w = +el.dataset.w, h = +el.dataset.h;
+            const { left, top, width, height } = toPixelBox(r, c, w, h);
+            el.style.left = left + 'px';
+            el.style.top = top + 'px';
+            el.style.width = width + 'px';
+            el.style.height = height + 'px';
+            el.dataset.row = r; el.dataset.col = c;
+        }
+
+        function toPixelBox(r, c, w, h) {
+            const left = GAP + c * (CELL + GAP);
+            const top = GAP + r * (CELL + GAP);
+            const width = w * CELL + (w - 1) * GAP;
+            const height = h * CELL + (h - 1) * GAP;
+            return { left, top, width, height };
+        }
+
+        function areaCells(r, c, w, h) {
+            const list = [];
+            for (let rr = r; rr < r + h; rr++) for (let cc = c; cc < c + w; cc++) list.push({ r: rr, c: cc });
+            return list;
+        }
+        function fitInBounds(r, c, w, h) { return r >= 0 && c >= 0 && r + h <= N && c + w <= N; }
+        function areaFree(r, c, w, h, ignoreId = null) {
+            if (!fitInBounds(r, c, w, h)) return false;
+            for (const { r: rr, c: cc } of areaCells(r, c, w, h)) {
+                const o = occ[rr][cc]; if (o && o.id !== ignoreId) return false;
+            }
+            return true;
+        }
+        function occupyArea(id, r, c, w, h) { for (const { r: rr, c: cc } of areaCells(r, c, w, h)) occ[rr][cc] = { id }; }
+        function clearArea(r, c, w, h) { for (const { r: rr, c: cc } of areaCells(r, c, w, h)) occ[rr][cc] = null; }
+
+        // ===== Drag payload =====
+        let dragPayload = null; // {type,color,w,h,id?,from?}
+
+        function onDragStartPiece(e) {
+            const color = this.dataset.color;
+            const w = parseInt(this.dataset.w || '1', 10);
+            const h = parseInt(this.dataset.h || '1', 10);
+            const fromBoard = this.dataset.src === 'board';
+            if (fromBoard) {
+                const r = +this.dataset.row, c = +this.dataset.col;
+                dragPayload = { type: 'board', color, w, h, id: this.id, from: { r, c } };
+            } else {
+                dragPayload = { type: 'palette', color, w, h };
+            }
+            e.dataTransfer.setData('text/plain', JSON.stringify(dragPayload));
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        function onDragEndPiece() { dragPayload = null; clearHighlights(); }
+
+        // Palette pieces start drag
+        palette.querySelectorAll('.piece').forEach(p => {
+            p.addEventListener('dragstart', onDragStartPiece);
+            p.addEventListener('dragend', onDragEndPiece);
+        });
+
+        // ===== Board-level drag/drop (robust vs per-cell listeners) =====
+        board.addEventListener('dragover', (e) => {
+            e.preventDefault(); // allow drop
+            const payload = getPayload(e); if (!payload) return;
+            const { r, c } = mouseToCell(e);
+            const ignoreId = payload.type === 'board' ? payload.id : null;
+            const ok = areaFree(r, c, payload.w, payload.h, ignoreId);
+            highlightArea(r, c, payload.w, payload.h, ok);
+        });
+
+        board.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const payload = getPayload(e); clearHighlights(); if (!payload) return;
+            const { r, c } = mouseToCell(e);
+            const ignoreId = payload.type === 'board' ? payload.id : null;
+            if (!areaFree(r, c, payload.w, payload.h, ignoreId)) { showToast('Can’t place there'); return; }
+
+            if (payload.type === 'palette') {
+                const piece = makePiece(payload.color, payload.w, payload.h);
+                board.appendChild(piece);
+                placePieceEl(piece, r, c);
+                occupyArea(piece.id, r, c, payload.w, payload.h);
+            } else {
+                const existing = document.getElementById(payload.id); if (!existing) return;
+                if (e.altKey) {
+                    const dup = makePiece(payload.color, payload.w, payload.h);
+                    board.appendChild(dup);
+                    placePieceEl(dup, r, c);
+                    occupyArea(dup.id, r, c, payload.w, payload.h);
+                } else {
+                    clearArea(payload.from.r, payload.from.c, payload.w, payload.h);
+                    placePieceEl(existing, r, c);
+                    occupyArea(existing.id, r, c, payload.w, payload.h);
+                }
+            }
+            drawMinimap();
+        });
+
+        function getPayload(e) {
+            try { return JSON.parse(e.dataTransfer.getData('text/plain')); }
+            catch { return dragPayload; }
+        }
+
+        function mouseToCell(e) {
+            const rect = board.getBoundingClientRect();
+            const x = e.clientX - rect.left - GAP; // account for board padding=GAP
+            const y = e.clientY - rect.top - GAP;
+            const step = CELL + GAP;
+            let c = Math.floor(x / step);
+            let r = Math.floor(y / step);
+            if (!isFinite(r) || r < 0) r = 0; if (!isFinite(c) || c < 0) c = 0;
+            if (r > N - 1) r = N - 1; if (c > N - 1) c = N - 1;
+            return { r, c };
+        }
+
+        // ===== Highlight helpers =====
+        let lastPreview = [];
+        function idx(r, c) { return r * N + c; }
+        function highlightArea(r, c, w, h, ok) {
+            clearHighlights();
+            const cls = ok ? 'drop-ok' : 'drop-no';
+            for (let rr = r; rr < r + h; rr++) {
+                for (let cc = c; cc < c + w; cc++) {
+                    const cell = cells[idx(rr, cc)];
+                    if (cell) { cell.classList.add(cls); lastPreview.push(cell); }
+                }
+            }
+        }
+        function clearHighlights() { lastPreview.forEach(el => el.classList.remove('drop-ok', 'drop-no')); lastPreview = []; }
+
+        // ===== Zoom (viewport fixed; change cell size) =====
+        function setView(n) {
+            const minV = 6, maxV = 40;
+            VIEW = Math.max(minV, Math.min(maxV, n));
+            // compute cell size so VIEW cells fit inside fixed viewport
+            const rect = viewport.getBoundingClientRect();
+            const newCellW = Math.floor((rect.width - (VIEW + 1) * GAP) / VIEW);
+            const newCellH = Math.floor((rect.height - (VIEW + 1) * GAP) / VIEW);
+            const newCell = Math.max(8, Math.min(96, Math.min(newCellW, newCellH)));
+            CELL = newCell; document.documentElement.style.setProperty('--cell', `${CELL}px`);
+            // reposition existing pieces at new scale
+            board.querySelectorAll('.piece.placed').forEach(el => {
+                const r = +el.dataset.row, c = +el.dataset.col; placePieceEl(el, r, c);
+            });
+            drawMinimap();
+        }
+
+        // Ctrl + wheel zoom
+        viewport.addEventListener('wheel', (e) => {
+            if (!e.ctrlKey) return; e.preventDefault();
+            const step = 2; setView(VIEW + (e.deltaY < 0 ? step : -step));
+        }, { passive: false });
+
+        // Keyboard panning
+        viewport.addEventListener('keydown', (e) => {
+            const step = e.shiftKey ? 5 : 1; const pix = (CELL + GAP) * step;
+            if (e.key.startsWith('Arrow')) e.preventDefault();
+            if (e.key === 'ArrowLeft') viewport.scrollBy({ left: -pix, top: 0 });
+            if (e.key === 'ArrowRight') viewport.scrollBy({ left: +pix, top: 0 });
+            if (e.key === 'ArrowUp') viewport.scrollBy({ left: 0, top: -pix });
+            if (e.key === 'ArrowDown') viewport.scrollBy({ left: 0, top: +pix });
+            setTimeout(drawMinimap, 30);
+        });
+
+        // Mini‑map & jump
+        function centerOnCell(r, c) {
+            const step = CELL + GAP;
+            const left = Math.max(0, (c - VIEW / 2) * step);
+            const top = Math.max(0, (r - VIEW / 2) * step);
+            viewport.scrollTo({ left, top });
+        }
+
+        if (btnJump) btnJump.addEventListener('click', () => {
+            const r = Math.max(0, Math.min(N - 1, parseInt(jr.value || '0', 10)));
+            const c = Math.max(0, Math.min(N - 1, parseInt(jc.value || '0', 10)));
+            centerOnCell(r, c); drawMinimap();
+        });
+
+        viewport.addEventListener('scroll', drawMinimap);
+        window.addEventListener('resize', () => { GAP = cssPx('--gap'); setView(VIEW); });
+
+        function drawMinimap() {
+            const W = minimap.width; const s = W / N; mctx.clearRect(0, 0, W, W);
+            mctx.fillStyle = '#0b1220'; mctx.fillRect(0, 0, W, W);
+            const pieces = board.querySelectorAll('.piece.placed');
+            for (const el of pieces) {
+                const r = +el.dataset.row, c = +el.dataset.col, pw = +el.dataset.w, ph = +el.dataset.h;
+                mctx.fillStyle = el.dataset.color || '#64748b';
+                mctx.fillRect(c * s, r * s, pw * s, ph * s);
+            }
+            const c0 = Math.max(0, viewport.scrollLeft / (CELL + GAP));
+            const r0 = Math.max(0, viewport.scrollTop / (CELL + GAP));
+            mctx.lineWidth = 2; mctx.strokeStyle = '#60a5fa';
+            mctx.strokeRect(c0 * s, r0 * s, VIEW * s, VIEW * s);
+        }
+
+        // ===== Dragging from palette =====
+        function onDragOverPrevent(e) { e.preventDefault(); }
+        // Allow dragging over viewport/board
+        viewport.addEventListener('dragover', onDragOverPrevent);
+
+        // ===== Toast =====
+        function showToast(msg) { toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1100); }
+
+        // ===== Init =====
+        setView(VIEW); // scale cells to fit starting VIEW
+        drawMinimap();
+    </script>
+</body>
+
+</html>
